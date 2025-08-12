@@ -160,7 +160,7 @@ npm run dev -- --params '{"userPrincipalName": "test@example.com"}'
 
 ## Migration Notes
 
-This action was migrated from Go to JavaScript as part of the SGNL Job Service modernization effort. The JavaScript version maintains feature parity with the original Go implementation while leveraging the Node.js 22 runtime capabilities.
+This action was migrated from Go to JavaScript as part of the SGNL's CAEP Hub modernization effort. The JavaScript version maintains feature parity with the original Go implementation while leveraging the Node.js 22 runtime capabilities.
 
 ## License
 
