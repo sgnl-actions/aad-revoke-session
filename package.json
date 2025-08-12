@@ -1,7 +1,7 @@
 {
-  "name": "@sgnl/job-template",
+  "name": "@sgnl-actions/aad-revoke-session",
   "version": "1.0.0",
-  "description": "Template for SGNL JavaScript jobs",
+  "description": "Revoke all Azure AD sign-in sessions for a user",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {

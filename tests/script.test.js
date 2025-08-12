@@ -1,121 +1,273 @@
+import { jest } from '@jest/globals';
 import script from '../src/script.mjs';
 
-describe('Job Template Script', () => {
+// Mock fetch globally
+global.fetch = jest.fn();
+global.URL = URL;
+
+describe('Azure AD Revoke Session Action', () => {
   const mockContext = {
-    env: {
-      ENVIRONMENT: 'test'
+    environment: {
+      AZURE_AD_TENANT_URL: 'https://graph.microsoft.com/v1.0'
     },
     secrets: {
-      API_KEY: 'test-api-key-123456'
-    },
-    outputs: {},
-    partial_results: {},
-    current_step: 'start'
+      AZURE_AD_TOKEN: 'test-bearer-token'
+    }
   };
 
+  beforeEach(() => {
+    jest.clearAllMocks();
+    global.console.log = jest.fn();
+    global.console.error = jest.fn();
+  });
+
   describe('invoke handler', () => {
-    test('should execute successfully with minimal params', async () => {
+    test('should successfully revoke sessions for a user', async () => {
       const params = {
-        target: 'test-user@example.com',
-        action: 'create'
+        userPrincipalName: 'user@example.com'
       };
+
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ value: true })
+      });
 
       const result = await script.invoke(params, mockContext);
 
       expect(result.status).toBe('success');
-      expect(result.target).toBe('test-user@example.com');
-      expect(result.action).toBe('create');
-      expect(result.status).toBeDefined();
-      expect(result.processed_at).toBeDefined();
-      expect(result.options_processed).toBe(0);
-    });
+      expect(result.userPrincipalName).toBe('user@example.com');
+      expect(result.value).toBe(true);
 
-    test('should handle dry run mode', async () => {
-      const params = {
-        target: 'test-user@example.com',
-        action: 'delete',
-        dry_run: true
-      };
-
-      const result = await script.invoke(params, mockContext);
-
-      expect(result.status).toBe('dry_run_completed');
-      expect(result.target).toBe('test-user@example.com');
-      expect(result.action).toBe('delete');
-    });
-
-    test('should process options array', async () => {
-      const params = {
-        target: 'test-group',
-        action: 'update',
-        options: ['force', 'notify', 'audit']
-      };
-
-      const result = await script.invoke(params, mockContext);
-
-      expect(result.status).toBe('success');
-      expect(result.target).toBe('test-group');
-      expect(result.options_processed).toBe(3);
-    });
-
-    test('should handle context with previous job outputs', async () => {
-      const contextWithOutputs = {
-        ...mockContext,
-        outputs: {
-          'create-user': {
-            user_id: '12345',
-            created_at: '2024-01-15T10:30:00Z'
-          },
-          'assign-groups': {
-            groups_assigned: 3
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://graph.microsoft.com/v1.0/users/user%40example.com/revokeSignInSessions',
+        expect.objectContaining({
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer test-bearer-token',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
           }
+        })
+      );
+    });
+
+    test('should handle Bearer prefix in token', async () => {
+      const params = {
+        userPrincipalName: 'user@example.com'
+      };
+
+      const contextWithBearer = {
+        ...mockContext,
+        secrets: {
+          AZURE_AD_TOKEN: 'Bearer existing-token'
         }
       };
 
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ value: true })
+      });
+
+      await script.invoke(params, contextWithBearer);
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'Authorization': 'Bearer existing-token'
+          })
+        })
+      );
+    });
+
+    test('should URL encode user principal name', async () => {
       const params = {
-        target: 'user-12345',
-        action: 'finalize'
+        userPrincipalName: 'user+test@example.com'
       };
 
-      const result = await script.invoke(params, contextWithOutputs);
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ value: true })
+      });
 
-      expect(result.status).toBe('success');
-      expect(result.target).toBe('user-12345');
-      expect(result.status).toBeDefined();
+      await script.invoke(params, mockContext);
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://graph.microsoft.com/v1.0/users/user%2Btest%40example.com/revokeSignInSessions',
+        expect.any(Object)
+      );
+    });
+
+    test('should throw error when userPrincipalName is missing', async () => {
+      const params = {};
+
+      await expect(script.invoke(params, mockContext))
+        .rejects.toThrow('userPrincipalName is required');
+
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    test('should throw error when AZURE_AD_TOKEN is missing', async () => {
+      const params = {
+        userPrincipalName: 'user@example.com'
+      };
+
+      const contextNoToken = {
+        ...mockContext,
+        secrets: {}
+      };
+
+      await expect(script.invoke(params, contextNoToken))
+        .rejects.toThrow('AZURE_AD_TOKEN secret is required');
+
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    test('should handle API error responses', async () => {
+      const params = {
+        userPrincipalName: 'user@example.com'
+      };
+
+      global.fetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        text: async () => 'User not found'
+      });
+
+      await expect(script.invoke(params, mockContext))
+        .rejects.toThrow('Failed to revoke sessions: 404 Not Found. Details: User not found');
+    });
+
+    test('should use custom tenant URL from environment', async () => {
+      const params = {
+        userPrincipalName: 'user@example.com'
+      };
+
+      const customContext = {
+        ...mockContext,
+        environment: {
+          AZURE_AD_TENANT_URL: 'https://custom.graph.microsoft.com/beta'
+        }
+      };
+
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ value: true })
+      });
+
+      await script.invoke(params, customContext);
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://custom.graph.microsoft.com/beta/users/user%40example.com/revokeSignInSessions',
+        expect.any(Object)
+      );
+    });
+
+    test('should use default tenant URL when not provided', async () => {
+      const params = {
+        userPrincipalName: 'user@example.com'
+      };
+
+      const contextNoEnv = {
+        secrets: {
+          AZURE_AD_TOKEN: 'test-token'
+        }
+      };
+
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ value: true })
+      });
+
+      await script.invoke(params, contextNoEnv);
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://graph.microsoft.com/v1.0/users/user%40example.com/revokeSignInSessions',
+        expect.any(Object)
+      );
     });
   });
 
   describe('error handler', () => {
-    test('should throw error by default', async () => {
+    test('should request retry on rate limiting (429)', async () => {
       const params = {
-        target: 'test-user@example.com',
-        action: 'create',
+        userPrincipalName: 'user@example.com',
         error: {
-          message: 'Something went wrong',
-          code: 'ERROR_CODE'
+          message: 'Failed to revoke sessions: 429 Too Many Requests'
         }
       };
 
-      await expect(script.error(params, mockContext)).rejects.toThrow('Unable to recover from error: Something went wrong');
+      const result = await script.error(params, mockContext);
+
+      expect(result.status).toBe('retry_requested');
     });
+
+    test('should request retry on temporary server errors', async () => {
+      const serverErrors = ['502', '503', '504'];
+
+      for (const errorCode of serverErrors) {
+        const params = {
+          userPrincipalName: 'user@example.com',
+          error: {
+            message: `Server error: ${errorCode} Bad Gateway`
+          }
+        };
+
+        const result = await script.error(params, mockContext);
+        expect(result.status).toBe('retry_requested');
+      }
+    });
+
+    test('should throw on authentication errors (401, 403)', async () => {
+      const authErrors = ['401', '403'];
+
+      for (const errorCode of authErrors) {
+        const errorMessage = `Authentication failed: ${errorCode} Forbidden`;
+        const params = {
+          userPrincipalName: 'user@example.com',
+          error: new Error(errorMessage)
+        };
+
+        await expect(script.error(params, mockContext))
+          .rejects.toThrow(errorMessage);
+      }
+    });
+
+    test('should request retry for unknown errors', async () => {
+      const params = {
+        userPrincipalName: 'user@example.com',
+        error: {
+          message: 'Unknown error occurred'
+        }
+      };
+
+      const result = await script.error(params, mockContext);
+      expect(result.status).toBe('retry_requested');
+    });
+
   });
 
   describe('halt handler', () => {
     test('should handle graceful shutdown', async () => {
       const params = {
-        target: 'test-user@example.com',
+        userPrincipalName: 'user@example.com',
         reason: 'timeout'
       };
 
       const result = await script.halt(params, mockContext);
 
       expect(result.status).toBe('halted');
-      expect(result.target).toBe('test-user@example.com');
+      expect(result.userPrincipalName).toBe('user@example.com');
       expect(result.reason).toBe('timeout');
-      expect(result.halted_at).toBeDefined();
     });
 
-    test('should handle halt without target', async () => {
+    test('should handle halt without userPrincipalName', async () => {
       const params = {
         reason: 'system_shutdown'
       };
@@ -123,7 +275,7 @@ describe('Job Template Script', () => {
       const result = await script.halt(params, mockContext);
 
       expect(result.status).toBe('halted');
-      expect(result.target).toBe('unknown');
+      expect(result.userPrincipalName).toBe('unknown');
       expect(result.reason).toBe('system_shutdown');
     });
   });
