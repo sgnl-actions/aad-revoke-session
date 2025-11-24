@@ -40,6 +40,7 @@ var script = {
    * Main execution handler - revokes all sessions for the specified user
    * @param {Object} params - Job input parameters
    * @param {Object} context - Execution context with env, secrets, outputs
+   * @param {string} context.secrets.BEARER_AUTH_TOKEN - Bearer token for Azure AD API authentication
    * @returns {Object} Job results
    */
   invoke: async (params, context) => {
@@ -50,10 +51,10 @@ var script = {
 
     // Get configuration
     const tenantUrl = context.environment?.AZURE_AD_TENANT_URL || 'https://graph.microsoft.com/v1.0';
-    const authToken = context.secrets?.AZURE_AD_TOKEN;
+    const authToken = context.secrets?.BEARER_AUTH_TOKEN;
 
     if (!authToken) {
-      throw new Error('AZURE_AD_TOKEN secret is required');
+      throw new Error('BEARER_AUTH_TOKEN secret is required');
     }
 
     console.log(`Revoking sessions for user: ${params.userPrincipalName}`);

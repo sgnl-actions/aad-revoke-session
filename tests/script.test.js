@@ -11,7 +11,7 @@ describe('Azure AD Revoke Session Action', () => {
       AZURE_AD_TENANT_URL: 'https://graph.microsoft.com/v1.0'
     },
     secrets: {
-      AZURE_AD_TOKEN: 'test-bearer-token'
+      BEARER_AUTH_TOKEN: 'test-bearer-token'
     }
   };
 
@@ -60,7 +60,7 @@ describe('Azure AD Revoke Session Action', () => {
       const contextWithBearer = {
         ...mockContext,
         secrets: {
-          AZURE_AD_TOKEN: 'Bearer existing-token'
+          BEARER_AUTH_TOKEN: 'Bearer existing-token'
         }
       };
 
@@ -110,7 +110,7 @@ describe('Azure AD Revoke Session Action', () => {
       expect(global.fetch).not.toHaveBeenCalled();
     });
 
-    test('should throw error when AZURE_AD_TOKEN is missing', async () => {
+    test('should throw error when BEARER_AUTH_TOKEN is missing', async () => {
       const params = {
         userPrincipalName: 'user@example.com'
       };
@@ -121,7 +121,7 @@ describe('Azure AD Revoke Session Action', () => {
       };
 
       await expect(script.invoke(params, contextNoToken))
-        .rejects.toThrow('AZURE_AD_TOKEN secret is required');
+        .rejects.toThrow('BEARER_AUTH_TOKEN secret is required');
 
       expect(global.fetch).not.toHaveBeenCalled();
     });
@@ -175,7 +175,7 @@ describe('Azure AD Revoke Session Action', () => {
 
       const contextNoEnv = {
         secrets: {
-          AZURE_AD_TOKEN: 'test-token'
+          BEARER_AUTH_TOKEN: 'test-token'
         }
       };
 

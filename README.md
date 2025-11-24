@@ -22,7 +22,7 @@ This action calls the Microsoft Graph API to revoke all refresh tokens and sessi
 
 | Name | Description | Required |
 |------|-------------|----------|
-| `AZURE_AD_TOKEN` | Azure AD access token with User.ReadWrite.All permission | Yes |
+| `BEARER_AUTH_TOKEN` | Azure AD access token with User.ReadWrite.All permission | Yes |
 
 ### Environment Variables
 
