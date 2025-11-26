@@ -8,10 +8,10 @@ global.URL = URL;
 describe('Azure AD Revoke Session Action', () => {
   const mockContext = {
     environment: {
-      AZURE_AD_TENANT_URL: 'https://graph.microsoft.com/v1.0'
+      ADDRESS: 'https://graph.microsoft.com'
     },
     secrets: {
-      BEARER_AUTH_TOKEN: 'test-bearer-token'
+      OAUTH2_AUTHORIZATION_CODE_ACCESS_TOKEN: 'test-bearer-token'
     }
   };
 
@@ -60,7 +60,7 @@ describe('Azure AD Revoke Session Action', () => {
       const contextWithBearer = {
         ...mockContext,
         secrets: {
-          BEARER_AUTH_TOKEN: 'Bearer existing-token'
+          OAUTH2_AUTHORIZATION_CODE_ACCESS_TOKEN: 'Bearer existing-token'
         }
       };
 
@@ -110,7 +110,7 @@ describe('Azure AD Revoke Session Action', () => {
       expect(global.fetch).not.toHaveBeenCalled();
     });
 
-    test('should throw error when BEARER_AUTH_TOKEN is missing', async () => {
+    test('should throw error when OAUTH2_AUTHORIZATION_CODE_ACCESS_TOKEN is missing', async () => {
       const params = {
         userPrincipalName: 'user@example.com'
       };
@@ -121,7 +121,7 @@ describe('Azure AD Revoke Session Action', () => {
       };
 
       await expect(script.invoke(params, contextNoToken))
-        .rejects.toThrow('BEARER_AUTH_TOKEN secret is required');
+        .rejects.toThrow('OAuth2 authentication is required');
 
       expect(global.fetch).not.toHaveBeenCalled();
     });
@@ -150,7 +150,7 @@ describe('Azure AD Revoke Session Action', () => {
       const customContext = {
         ...mockContext,
         environment: {
-          AZURE_AD_TENANT_URL: 'https://custom.graph.microsoft.com/beta'
+          ADDRESS: 'https://custom.graph.microsoft.com'
         }
       };
 
@@ -163,35 +163,11 @@ describe('Azure AD Revoke Session Action', () => {
       await script.invoke(params, customContext);
 
       expect(global.fetch).toHaveBeenCalledWith(
-        'https://custom.graph.microsoft.com/beta/users/user%40example.com/revokeSignInSessions',
+        'https://custom.graph.microsoft.com/v1.0/users/user%40example.com/revokeSignInSessions',
         expect.any(Object)
       );
     });
 
-    test('should use default tenant URL when not provided', async () => {
-      const params = {
-        userPrincipalName: 'user@example.com'
-      };
-
-      const contextNoEnv = {
-        secrets: {
-          BEARER_AUTH_TOKEN: 'test-token'
-        }
-      };
-
-      global.fetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ value: true })
-      });
-
-      await script.invoke(params, contextNoEnv);
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        'https://graph.microsoft.com/v1.0/users/user%40example.com/revokeSignInSessions',
-        expect.any(Object)
-      );
-    });
   });
 
   describe('error handler', () => {

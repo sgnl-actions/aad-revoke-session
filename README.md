@@ -18,23 +18,49 @@ This action calls the Microsoft Graph API to revoke all refresh tokens and sessi
 
 ## Configuration
 
-### Secrets
+### Authentication
 
-| Name | Description | Required |
-|------|-------------|----------|
-| `BEARER_AUTH_TOKEN` | Azure AD access token with User.ReadWrite.All permission | Yes |
+This action supports two OAuth2 authentication methods:
 
-### Environment Variables
+#### OAuth2 Authorization Code Flow
 
-| Name | Description | Default |
-|------|-------------|---------|
-| `AZURE_AD_TENANT_URL` | Microsoft Graph API endpoint | `https://graph.microsoft.com/v1.0` |
+**Required Secrets:**
+- **`OAUTH2_AUTHORIZATION_CODE_ACCESS_TOKEN`**: OAuth2 access token
+
+**Required Environment Variables:**
+- **`OAUTH2_AUTHORIZATION_CODE_CLIENT_ID`**: OAuth2 client ID
+- **`OAUTH2_AUTHORIZATION_CODE_TOKEN_URL`**: Token endpoint URL
+
+**Optional Environment Variables:**
+- **`OAUTH2_AUTHORIZATION_CODE_AUTH_STYLE`**: Authentication style (`InHeader`, `InParams`, or `AutoDetect`)
+- **`OAUTH2_AUTHORIZATION_CODE_AUTH_URL`**: Authorization endpoint URL
+- **`OAUTH2_AUTHORIZATION_CODE_SCOPE`**: OAuth2 scope
+- **`OAUTH2_AUTHORIZATION_CODE_REDIRECT_URI`**: OAuth2 redirect URI
+
+#### OAuth2 Client Credentials Flow
+
+**Required Secrets:**
+- **`OAUTH2_CLIENT_CREDENTIALS_CLIENT_SECRET`**: OAuth2 client secret
+
+**Required Environment Variables:**
+- **`OAUTH2_CLIENT_CREDENTIALS_TOKEN_URL`**: Token endpoint URL
+- **`OAUTH2_CLIENT_CREDENTIALS_CLIENT_ID`**: OAuth2 client ID
+
+**Optional Environment Variables:**
+- **`OAUTH2_CLIENT_CREDENTIALS_AUTH_STYLE`**: Authentication style (`InHeader`, `InParams`, or `AutoDetect`)
+- **`OAUTH2_CLIENT_CREDENTIALS_SCOPE`**: OAuth2 scope
+- **`OAUTH2_CLIENT_CREDENTIALS_AUDIENCE`**: OAuth2 audience
+
+### Required Environment Variables
+
+- **`ADDRESS`**: Azure AD API base URL (e.g., `https://graph.microsoft.com`)
 
 ### Input Parameters
 
 | Name | Type | Description | Required |
 |------|------|-------------|----------|
 | `userPrincipalName` | string | The user principal name (UPN) of the user whose sessions should be revoked | Yes |
+| `address` | string | The Azure AD API base URL (overrides `ADDRESS` environment variable) | No |
 
 ### Output Structure
 
@@ -56,19 +82,12 @@ This action calls the Microsoft Graph API to revoke all refresh tokens and sessi
 }
 ```
 
-### With Custom Tenant URL
+### With Custom Address
 
-Environment:
 ```json
 {
-  "AZURE_AD_TENANT_URL": "https://graph.microsoft.com/beta"
-}
-```
-
-Input:
-```json
-{
-  "userPrincipalName": "jane.smith@example.com"
+  "userPrincipalName": "jane.smith@example.com",
+  "address": "https://graph.microsoft.com"
 }
 ```
 
