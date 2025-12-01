@@ -121,7 +121,7 @@ describe('Azure AD Revoke Session Action', () => {
       };
 
       await expect(script.invoke(params, contextNoToken))
-        .rejects.toThrow('OAuth2 authentication is required');
+        .rejects.toThrow('No authentication configured');
 
       expect(global.fetch).not.toHaveBeenCalled();
     });
