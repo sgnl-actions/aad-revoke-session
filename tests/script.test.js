@@ -171,60 +171,47 @@ describe('Azure AD Revoke Session Action', () => {
   });
 
   describe('error handler', () => {
-    test('should request retry on rate limiting (429)', async () => {
+    test('should re-throw error and let framework handle retries', async () => {
+      const errorObj = new Error('Failed to revoke sessions: 429 Too Many Requests');
       const params = {
         userPrincipalName: 'user@example.com',
-        error: {
-          message: 'Failed to revoke sessions: 429 Too Many Requests'
-        }
+        error: errorObj
       };
 
-      const result = await script.error(params, mockContext);
-
-      expect(result.status).toBe('retry_requested');
+      await expect(script.error(params, mockContext)).rejects.toThrow(errorObj);
+      expect(console.error).toHaveBeenCalledWith(
+        'Session revocation failed for user@example.com: Failed to revoke sessions: 429 Too Many Requests'
+      );
     });
 
-    test('should request retry on temporary server errors', async () => {
-      const serverErrors = ['502', '503', '504'];
-
-      for (const errorCode of serverErrors) {
-        const params = {
-          userPrincipalName: 'user@example.com',
-          error: {
-            message: `Server error: ${errorCode} Bad Gateway`
-          }
-        };
-
-        const result = await script.error(params, mockContext);
-        expect(result.status).toBe('retry_requested');
-      }
-    });
-
-    test('should throw on authentication errors (401, 403)', async () => {
-      const authErrors = ['401', '403'];
-
-      for (const errorCode of authErrors) {
-        const errorMessage = `Authentication failed: ${errorCode} Forbidden`;
-        const params = {
-          userPrincipalName: 'user@example.com',
-          error: new Error(errorMessage)
-        };
-
-        await expect(script.error(params, mockContext))
-          .rejects.toThrow(errorMessage);
-      }
-    });
-
-    test('should request retry for unknown errors', async () => {
+    test('should re-throw server errors', async () => {
+      const errorObj = new Error('Server error: 502 Bad Gateway');
       const params = {
         userPrincipalName: 'user@example.com',
-        error: {
-          message: 'Unknown error occurred'
-        }
+        error: errorObj
       };
 
-      const result = await script.error(params, mockContext);
-      expect(result.status).toBe('retry_requested');
+      await expect(script.error(params, mockContext)).rejects.toThrow(errorObj);
+    });
+
+    test('should re-throw authentication errors', async () => {
+      const errorObj = new Error('Authentication failed: 401 Forbidden');
+      const params = {
+        userPrincipalName: 'user@example.com',
+        error: errorObj
+      };
+
+      await expect(script.error(params, mockContext)).rejects.toThrow(errorObj);
+    });
+
+    test('should re-throw any error', async () => {
+      const errorObj = new Error('Unknown error occurred');
+      const params = {
+        userPrincipalName: 'user@example.com',
+        error: errorObj
+      };
+
+      await expect(script.error(params, mockContext)).rejects.toThrow(errorObj);
     });
 
   });
