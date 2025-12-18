@@ -509,11 +509,6 @@ var script = {
       console.warn('Template resolution errors:', errors);
     }
 
-    // Validate required parameters
-    if (!resolvedParams.userPrincipalName) {
-      throw new Error('userPrincipalName is required');
-    }
-
     // Get base URL and authentication headers using utilities
     const baseUrl = getBaseURL(resolvedParams, context);
     const headers = await createAuthHeaders(context);
@@ -541,7 +536,8 @@ var script = {
     return {
       status: 'success',
       userPrincipalName: resolvedParams.userPrincipalName,
-      value: result.value || true
+      value: result.value || true,
+      address: baseUrl
     };
   },
 
