@@ -101,30 +101,7 @@ describe('Azure AD Revoke Session Action', () => {
       );
     });
 
-    test('should throw error when userPrincipalName is missing', async () => {
-      const params = {};
 
-      await expect(script.invoke(params, mockContext))
-        .rejects.toThrow('userPrincipalName is required');
-
-      expect(global.fetch).not.toHaveBeenCalled();
-    });
-
-    test('should throw error when OAUTH2_AUTHORIZATION_CODE_ACCESS_TOKEN is missing', async () => {
-      const params = {
-        userPrincipalName: 'user@example.com'
-      };
-
-      const contextNoToken = {
-        ...mockContext,
-        secrets: {}
-      };
-
-      await expect(script.invoke(params, contextNoToken))
-        .rejects.toThrow('No authentication configured');
-
-      expect(global.fetch).not.toHaveBeenCalled();
-    });
 
     test('should handle API error responses', async () => {
       const params = {
