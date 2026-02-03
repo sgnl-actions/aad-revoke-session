@@ -5,7 +5,7 @@
  * This forces the user to re-authenticate for all applications.
  */
 
-import { getBaseURL, createAuthHeaders, resolveJSONPathTemplates} from '@sgnl-actions/utils';
+import { getBaseURL, createAuthHeaders} from '@sgnl-actions/utils';
 
 /**
  * Helper function to revoke sessions for a user
@@ -49,23 +49,16 @@ export default {
    * @returns {Object} Job results
    */
   invoke: async (params, context) => {
-    const jobContext = context.data || {};
-
-    // Resolve JSONPath templates in params
-    const { result: resolvedParams, errors } = resolveJSONPathTemplates(params, jobContext);
-    if (errors.length > 0) {
-      console.warn('Template resolution errors:', errors);
-    }
 
     // Get base URL and authentication headers using utilities
-    const baseUrl = getBaseURL(resolvedParams, context);
+    const baseUrl = getBaseURL(params, context);
     const headers = await createAuthHeaders(context);
 
-    console.log(`Revoking sessions for user: ${resolvedParams.userPrincipalName}`);
+    console.log(`Revoking sessions for user: ${params.userPrincipalName}`);
 
     // Call Azure AD API to revoke sessions
     const response = await revokeUserSessions(
-      resolvedParams.userPrincipalName,
+      params.userPrincipalName,
       baseUrl,
       headers
     );
@@ -79,11 +72,11 @@ export default {
     // Parse response - API returns { value: true } on success
     const result = await response.json();
 
-    console.log(`Successfully revoked sessions for user: ${resolvedParams.userPrincipalName}`);
+    console.log(`Successfully revoked sessions for user: ${params.userPrincipalName}`);
 
     return {
       status: 'success',
-      userPrincipalName: resolvedParams.userPrincipalName,
+      userPrincipalName: params.userPrincipalName,
       value: result.value || true,
       address: baseUrl
     };
