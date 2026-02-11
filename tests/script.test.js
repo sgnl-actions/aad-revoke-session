@@ -1,5 +1,6 @@
 import { jest } from '@jest/globals';
 import script from '../src/script.mjs';
+import { SGNL_USER_AGENT } from '@sgnl-actions/utils';
 
 // Mock fetch globally
 global.fetch = jest.fn();
@@ -46,7 +47,8 @@ describe('Azure AD Revoke Session Action', () => {
           headers: {
             'Authorization': 'Bearer test-bearer-token',
             'Accept': 'application/json',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            "User-Agent": SGNL_USER_AGENT,
           }
         })
       );
