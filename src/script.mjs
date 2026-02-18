@@ -5,7 +5,7 @@
  * This forces the user to re-authenticate for all applications.
  */
 
-import { getBaseURL, createAuthHeaders} from '@sgnl-actions/utils';
+import { getBaseURL, createAuthHeaders } from '@sgnl-actions/utils';
 
 /**
  * Helper function to revoke sessions for a user
