@@ -48,7 +48,7 @@ describe('Azure AD Revoke Session Action', () => {
             'Authorization': 'Bearer test-bearer-token',
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            "User-Agent": SGNL_USER_AGENT,
+            'User-Agent': SGNL_USER_AGENT
           }
         })
       );
