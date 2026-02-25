@@ -48,7 +48,7 @@ describe('Azure AD Revoke Session Action', () => {
             'Authorization': 'Bearer test-bearer-token',
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            "User-Agent": SGNL_USER_AGENT,
+            'User-Agent': SGNL_USER_AGENT
           }
         })
       );
@@ -219,6 +219,198 @@ describe('Azure AD Revoke Session Action', () => {
       expect(result.status).toBe('halted');
       expect(result.userPrincipalName).toBe('unknown');
       expect(result.reason).toBe('system_shutdown');
+    });
+  });
+
+  describe('invoke handler - idempotency', () => {
+    test('should succeed on first call', async () => {
+      global.fetch.mockResolvedValueOnce({
+        ok: true, status: 200,
+        json: async () => ({ value: true })
+      });
+
+      const result = await script.invoke({ userPrincipalName: 'user@example.com' }, mockContext);
+
+      expect(result.status).toBe('success');
+      expect(result.value).toBe(true);
+    });
+
+    test('should succeed on second call with no active sessions', async () => {
+      // revokeSignInSessions always returns { value: true }
+      global.fetch.mockResolvedValueOnce({
+        ok: true, status: 200,
+        json: async () => ({ value: true })
+      });
+
+      const result = await script.invoke({ userPrincipalName: 'user@example.com' }, mockContext);
+
+      expect(result.status).toBe('success');
+      expect(result.value).toBe(true);
+    });
+
+    test('should produce same result on repeated calls', async () => {
+      global.fetch
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ value: true }) })
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ value: true }) });
+
+      const r1 = await script.invoke({ userPrincipalName: 'user@example.com' }, mockContext);
+      const r2 = await script.invoke({ userPrincipalName: 'user@example.com' }, mockContext);
+
+      expect(r1.status).toBe('success');
+      expect(r2.status).toBe('success');
+      expect(r1.value).toBe(r2.value);
+      expect(r1.userPrincipalName).toBe(r2.userPrincipalName);
+    });
+  });
+
+  describe('invoke handler - input validation', () => {
+    test('should throw when userPrincipalName is missing', async () => {
+      await expect(script.invoke({}, mockContext))
+        .rejects.toThrow('userPrincipalName parameter is required and cannot be empty');
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    test('should throw when userPrincipalName is empty string', async () => {
+      await expect(script.invoke({ userPrincipalName: '  ' }, mockContext))
+        .rejects.toThrow('userPrincipalName parameter is required and cannot be empty');
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    test('should throw when auth token is missing', async () => {
+      await expect(script.invoke(
+        { userPrincipalName: 'user@example.com' },
+        { environment: { ADDRESS: 'https://graph.microsoft.com' }, secrets: {} }
+      )).rejects.toThrow(/No authentication configured/);
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('invoke handler - request construction', () => {
+    test('should use POST method', async () => {
+      global.fetch.mockResolvedValueOnce({
+        ok: true, status: 200, json: async () => ({ value: true })
+      });
+
+      await script.invoke({ userPrincipalName: 'user@example.com' }, mockContext);
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ method: 'POST' })
+      );
+    });
+
+    test('should call revokeSignInSessions endpoint', async () => {
+      global.fetch.mockResolvedValueOnce({
+        ok: true, status: 200, json: async () => ({ value: true })
+      });
+
+      await script.invoke({ userPrincipalName: 'user@example.com' }, mockContext);
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/revokeSignInSessions'),
+        expect.any(Object)
+      );
+    });
+
+    test('should include User-Agent header', async () => {
+      global.fetch.mockResolvedValueOnce({
+        ok: true, status: 200, json: async () => ({ value: true })
+      });
+
+      await script.invoke({ userPrincipalName: 'user@example.com' }, mockContext);
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.objectContaining({ 'User-Agent': SGNL_USER_AGENT })
+        })
+      );
+    });
+
+    test('should use custom address from params over environment ADDRESS', async () => {
+      global.fetch.mockResolvedValueOnce({
+        ok: true, status: 200, json: async () => ({ value: true })
+      });
+
+      await script.invoke({
+        userPrincipalName: 'user@example.com',
+        address: 'https://custom-proxy.example.com'
+      }, mockContext);
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('https://custom-proxy.example.com'),
+        expect.any(Object)
+      );
+    });
+
+    test('should not include a request body', async () => {
+      global.fetch.mockResolvedValueOnce({
+        ok: true, status: 200, json: async () => ({ value: true })
+      });
+
+      await script.invoke({ userPrincipalName: 'user@example.com' }, mockContext);
+
+      const callOptions = global.fetch.mock.calls[0][1];
+      expect(callOptions.body).toBeUndefined();
+    });
+  });
+
+  describe('invoke handler - network failures', () => {
+    test('should throw when fetch rejects', async () => {
+      global.fetch.mockRejectedValueOnce(new Error('Network timeout'));
+
+      await expect(script.invoke(
+        { userPrincipalName: 'user@example.com' },
+        mockContext
+      )).rejects.toThrow('Network timeout');
+    });
+  });
+
+  describe('invoke handler - error responses', () => {
+    test('should throw on 401 Unauthorized', async () => {
+      global.fetch.mockResolvedValueOnce({
+        ok: false, status: 401, statusText: 'Unauthorized',
+        text: async () => '{"error":{"code":"InvalidAuthenticationToken"}}'
+      });
+
+      await expect(script.invoke(
+        { userPrincipalName: 'user@example.com' },
+        mockContext
+      )).rejects.toThrow(/401 Unauthorized/);
+    });
+
+    test('should throw on 403 Forbidden', async () => {
+      global.fetch.mockResolvedValueOnce({
+        ok: false, status: 403, statusText: 'Forbidden',
+        text: async () => '{"error":{"code":"Authorization_RequestDenied"}}'
+      });
+
+      await expect(script.invoke(
+        { userPrincipalName: 'user@example.com' },
+        mockContext
+      )).rejects.toThrow(/403 Forbidden/);
+    });
+
+    test('should throw on 429 Too Many Requests', async () => {
+      global.fetch.mockResolvedValueOnce({
+        ok: false, status: 429, statusText: 'Too Many Requests',
+        text: async () => '{"error":{"code":"TooManyRequests"}}'
+      });
+
+      await expect(script.invoke(
+        { userPrincipalName: 'user@example.com' },
+        mockContext
+      )).rejects.toThrow(/429/);
+    });
+  });
+
+  describe('halt handler - edge cases', () => {
+    test('should handle halt with no params at all', async () => {
+      const result = await script.halt({}, mockContext);
+
+      expect(result.status).toBe('halted');
+      expect(result.userPrincipalName).toBe('unknown');
+      expect(result.reason).toBeUndefined();
     });
   });
 });

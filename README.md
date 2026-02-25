@@ -198,7 +198,7 @@ npm run build
 
 ### Local Development
 ```bash
-npm run dev -- --params '{"userPrincipalName": "test@example.com"}'
+npm run dev -- --params '{"userPrincipalName": "test@example.com"}' --secrets '{"OAUTH2_CLIENT_CREDENTIALS_CLIENT_SECRET":"xxx","OAUTH2_CLIENT_CREDENTIALS_CLIENT_ID":"xxx","OAUTH2_CLIENT_CREDENTIALS_TOKEN_URL":"xxx","OAUTH2_CLIENT_CREDENTIALS_SCOPE":"https://graph.microsoft.com/.default"}'
 ```
 
 ## Migration Notes
