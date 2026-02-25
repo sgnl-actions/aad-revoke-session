@@ -1,17 +1,11 @@
-HTTP/1.1 403 Forbidden
-Content-Type: application/json; charset=utf-8
+HTTP/2 403
 cache-control: no-cache
-Strict-Transport-Security: max-age=31536000
-Date: Mon, 25 Feb 2026 10:30:00 GMT
-Content-Length: 130
+content-type: application/json
+strict-transport-security: max-age=31536000
+request-id: 944acb6d-1f0b-45c6-becc-46f0155731de
+client-request-id: 944acb6d-1f0b-45c6-becc-46f0155731de
+x-ms-ags-diagnostic: {"ServerInfo":{"DataCenter":"West US 2","Slice":"E","Ring":"4","ScaleUnit":"001","RoleInstance":"MW2PEPF000138B9"}}
+x-ms-resource-unit: 1
+date: Wed, 25 Feb 2026 21:06:58 GMT
 
-{
-  "error": {
-    "code": "Authorization_RequestDenied",
-    "message": "Insufficient privileges to complete the operation.",
-    "innerError": {
-      "date": "2026-02-25T10:30:00",
-      "request-id": "12345678-1234-1234-1234-123456789012"
-    }
-  }
-}
+{"error":{"code":"Authorization_RequestDenied","message":"Insufficient privileges to complete the operation.","innerError":{"date":"2026-02-25T21:06:59","request-id":"944acb6d-1f0b-45c6-becc-46f0155731de","client-request-id":"944acb6d-1f0b-45c6-becc-46f0155731de"}}}
