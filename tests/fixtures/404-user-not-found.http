@@ -1,0 +1,11 @@
+HTTP/2 404 
+cache-control: no-cache
+content-type: application/json
+strict-transport-security: max-age=31536000
+request-id: be594cd6-737b-4c5c-9806-eb4f8803b515
+client-request-id: be594cd6-737b-4c5c-9806-eb4f8803b515
+x-ms-ags-diagnostic: {"ServerInfo":{"DataCenter":"West US 2","Slice":"E","Ring":"4","ScaleUnit":"005","RoleInstance":"MWH0EPF000B882E"}}
+x-ms-resource-unit: 1
+date: Wed, 25 Feb 2026 21:21:51 GMT
+
+{"error":{"code":"Request_ResourceNotFound","message":"Resource 'nobody@test-tenant.onmicrosoft.com' does not exist or one of its queried reference-property objects are not present.","innerError":{"date":"2026-02-25T21:21:51","request-id":"be594cd6-737b-4c5c-9806-eb4f8803b515","client-request-id":"be594cd6-737b-4c5c-9806-eb4f8803b515"}}}
